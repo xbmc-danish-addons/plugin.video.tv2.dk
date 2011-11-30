@@ -1,4 +1,3 @@
-# coding = 'utf-8'
 import re
 import sys
 import simplejson
@@ -12,31 +11,31 @@ import xbmcplugin
 import xbmcaddon
 
 KEY_TO_TITLE = {
-    'beep' : 'Beep - Gadgets',
-    'sport' : 'Sporten',
-    'station2' : 'Station 2',
-    'zulu' : 'Zulu',
-    'tour2009' : 'Tour de France 2009',
-    'mogensen-kristiansen' : 'Mogensen & Kristiansen',
-    'news-finans' : 'News Finansmagasinet',
-    'nyheder' : 'Nyhederne',
-    'most-viewed' : 'Mest sete',
-    'go' : 'Go\' Morgen / Aften',
-    'programmer' : 'Programmer',
-    'finans' : 'Finans',
-    'musik' : 'VIP Musik',
-    'latest' : 'Nyeste'
+    'beep' : 30001,
+    'sport' : 30002,
+    'station2' : 30003,
+    'zulu' : 30004,
+    'tour2009' : 30005,
+    'mogensen-kristiansen' : 30006,
+    'news-finans' : 30007,
+    'nyheder' : 30008,
+    'most-viewed' : 30009,
+    'go' : 30010,
+    'programmer' : 30011,
+    'finans' : 30012,
+    'musik' : 30013,
+    'latest' : 30014
 }
 
 BASE_URL = 'http://video.tv2.dk/js/video-list.js.php/index.js'
-
 class TV2VideoAddon(object):
     def showOverview(self):
         json = self._loadJson()
 
         for key in json.keys():
             if KEY_TO_TITLE.has_key(key):
-                item = xbmcgui.ListItem(KEY_TO_TITLE[key], iconImage=ICON, thumbnailImage=ICON)
+                title = ADDON.getLocalizedString(KEY_TO_TITLE[key])
+                item = xbmcgui.ListItem(title, iconImage=ICON, thumbnailImage=ICON)
             else:
                 item = xbmcgui.ListItem(key, iconImage=ICON, thumbnailImage=ICON)
 
