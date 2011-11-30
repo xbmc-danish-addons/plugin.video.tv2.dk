@@ -3,14 +3,13 @@ import re
 import sys
 import simplejson
 import os
+import cgi as urlparse
+import urllib2
+from htmlentitydefs import name2codepoint
 
-import xbmc
 import xbmcgui
 import xbmcplugin
 import xbmcaddon
-
-import danishaddons
-import danishaddons.web
 
 KEY_TO_TITLE = {
     'beep' : 'Beep - Gadgets',
@@ -31,84 +30,128 @@ KEY_TO_TITLE = {
 
 BASE_URL = 'http://video.tv2.dk/js/video-list.js.php/index.js'
 
-def showOverview():
-    json = loadJson()
-    icon = os.path.join(danishaddons.ADDON_PATH, 'icon.png')
+class TV2VideoAddon(object):
+    def showOverview(self):
+        json = self._loadJson()
 
-    for key in json.keys():
-        if KEY_TO_TITLE.has_key(key):
-            item = xbmcgui.ListItem(KEY_TO_TITLE[key], iconImage = icon)
-        else:
-            item = xbmcgui.ListItem(key, iconImage = icon)
+        for key in json.keys():
+            if KEY_TO_TITLE.has_key(key):
+                item = xbmcgui.ListItem(KEY_TO_TITLE[key], iconImage=ICON, thumbnailImage=ICON)
+            else:
+                item = xbmcgui.ListItem(key, iconImage=ICON, thumbnailImage=ICON)
 
-        url = danishaddons.ADDON_PATH + '?key=' + key
-        xbmcplugin.addDirectoryItem(danishaddons.ADDON_HANDLE, url, item, True)
+            url = PATH + '?key=' + key
+            xbmcplugin.addDirectoryItem(HANDLE, url, item, True)
 
-    xbmcplugin.setContent(danishaddons.ADDON_HANDLE, 'tvshows')
-    xbmcplugin.addSortMethod(danishaddons.ADDON_HANDLE, xbmcplugin.SORT_METHOD_LABEL)
-    xbmcplugin.endOfDirectory(danishaddons.ADDON_HANDLE)
-
-
-def showCategory(key):
-    json = loadJson()
-
-    for e in json[key]:
-        infoLabels = dict()
-        if e['headline'] is not None:
-            infoLabels['title'] = danishaddons.web.decodeHtmlEntities(e['headline'])
-        if e['descr'] is not None:
-            infoLabels['plot'] = danishaddons.web.decodeHtmlEntities(e['descr'])
-        if e['date'] is not None:
-            infoLabels['year'] = int(e['date'][6:])
-            infoLabels['date'] = e['date'].replace('-', '.')
-        if e['duration'] is not None:
-            infoLabels['duration'] = e['duration'][1:9]
-
-        item = xbmcgui.ListItem(infoLabels['title'], iconImage = e['img'])
-        item.setInfo('video', infoLabels)
-        item.setProperty('IsPlayable', 'true')
-        url = danishaddons.ADDON_PATH + '?id=' + str(e['id'])
-
-        xbmcplugin.addDirectoryItem(danishaddons.ADDON_HANDLE, url, item)
-
-    xbmcplugin.setContent(danishaddons.ADDON_HANDLE, 'episodes')
-    xbmcplugin.addSortMethod(danishaddons.ADDON_HANDLE, xbmcplugin.SORT_METHOD_DATE)
-    xbmcplugin.endOfDirectory(danishaddons.ADDON_HANDLE)
+#        xbmcplugin.setContent(HANDLE, 'tvshows')
+        xbmcplugin.addSortMethod(HANDLE, xbmcplugin.SORT_METHOD_LABEL)
+        xbmcplugin.endOfDirectory(HANDLE)
 
 
-def playVideo(id):
+    def showCategory(self, key):
+        json = self._loadJson()
+
+        for e in json[key]:
+            infoLabels = dict()
+            if e['headline'] is not None:
+                infoLabels['title'] = self._decodeHtmlEntities(e['headline'])
+            if e['descr'] is not None:
+                infoLabels['plot'] = self._decodeHtmlEntities(e['descr'])
+            if e['date'] is not None:
+                infoLabels['year'] = int(e['date'][6:])
+                infoLabels['date'] = e['date'].replace('-', '.')
+            if e['duration'] is not None:
+                infoLabels['duration'] = e['duration'][1:9]
+
+            item = xbmcgui.ListItem(infoLabels['title'], iconImage = e['img'], thumbnailImage=e['img'])
+            item.setInfo('video', infoLabels)
+            item.setProperty('IsPlayable', 'true')
+            url = PATH + '?id=' + str(e['id'])
+
+            xbmcplugin.addDirectoryItem(HANDLE, url, item)
+
+#        xbmcplugin.setContent(HANDLE, 'episodes')
+        xbmcplugin.addSortMethod(HANDLE, xbmcplugin.SORT_METHOD_DATE)
+        xbmcplugin.endOfDirectory(HANDLE)
+
+
+    def playVideo(self, id):
         # retrieve masquarade playlist
-        playlist = danishaddons.web.downloadUrl('http://common.tv2.dk/flashplayer/playlistSimple.xml.php/clip-' + id + '.xml')
+        u = urllib2.urlopen('http://common.tv2.dk/flashplayer/playlistSimple.xml.php/clip-' + id + '.xml')
+        playlist = u.read()
+        u.close()
         m = re.search('video="([^"]+)" materialId="([^"]+)"', playlist)
 
         # retrive crossdomain to setup next request for geocheck
-        danishaddons.web.downloadUrl('http://common-dyn.tv2.dk/crossdomain.xml')
+        u = urllib2.urlopen('http://common-dyn.tv2.dk/crossdomain.xml')
+        u.read()
+        u.close()
 
         # retrieve real playlist
-        playlist = danishaddons.web.downloadUrl('http://common-dyn.tv2.dk/flashplayer/geocheck.php?id=' + m.group(2) + '&file=' + m.group(1))
+        u = urllib2.urlopen('http://common-dyn.tv2.dk/flashplayer/geocheck.php?id=' + m.group(2) + '&file=' + m.group(1))
+        playlist = u.read()
+        u.close()
 
         item = xbmcgui.ListItem(path = playlist)
-        xbmcplugin.setResolvedUrl(danishaddons.ADDON_HANDLE, True, item)
+        xbmcplugin.setResolvedUrl(HANDLE, True, item)
 
-def loadJson():
-    json_path = os.path.join(danishaddons.ADDON_DATA_PATH, 'video.js')
-    json = danishaddons.web.downloadAndCacheUrl(BASE_URL, json_path, 60)
+    def _loadJson(self):
+        u = urllib2.urlopen(BASE_URL)
+        json = u.read()
+        u.close()
 
-    # get json part of js file
-    m = re.search('data = (\{.*)\}', json, re.DOTALL)
-    # fixup json parsing with simplejson, ie. replace ' with "
-    json = re.sub(r'\'([\w-]+)\':', r'"\1":', m.group(1))
+        # get json part of js file
+        m = re.search('data = (\{.*)\}', json, re.DOTALL)
+        # fixup json parsing with simplejson, ie. replace ' with "
+        json = re.sub(r'\'([\w-]+)\':', r'"\1":', m.group(1))
 
-    return simplejson.loads(json)
+        return simplejson.loads(json)
+
+    def _decodeHtmlEntities(self, string):
+        """Decodes the HTML entities found in the string and returns the modified string.
+
+        Both decimal (&#000;) and hexadecimal (&x00;) are supported as well as HTML entities,
+        such as &aelig;
+
+        Keyword arguments:
+        string -- the string with HTML entities
+
+        """
+        def substituteEntity(match):
+            ent = match.group(3)
+            if match.group(1) == "#":
+                # decoding by number
+                if match.group(2) == '':
+                    # number is in decimal
+                    return unichr(int(ent))
+            elif match.group(2) == 'x':
+                # number is in hex
+                return unichr(int('0x'+ent, 16))
+            else:
+                # they were using a name
+                cp = name2codepoint.get(ent)
+                if cp:
+                    return unichr(cp)
+                else:
+                    return match.group()
+
+        entity_re = re.compile(r'&(#?)(x?)(\w+);')
+        return entity_re.subn(substituteEntity, string)[0]
 
 
 if __name__ == '__main__':
-    danishaddons.init(sys.argv)
+    ADDON = xbmcaddon.Addon(id = 'plugin.video.tv2.dk')
+    PATH = sys.argv[0]
+    HANDLE = int(sys.argv[1])
+    PARAMS = urlparse.parse_qs(sys.argv[2][1:])
 
-    if danishaddons.ADDON_PARAMS.has_key('key'):
-        showCategory(danishaddons.ADDON_PARAMS['key'])
-    elif danishaddons.ADDON_PARAMS.has_key('id'):
-        playVideo(danishaddons.ADDON_PARAMS['id'])
+    ICON = os.path.join(ADDON.getAddonInfo('path'), 'icon.png')
+
+    tv2 = TV2VideoAddon()
+    if PARAMS.has_key('key'):
+        tv2.showCategory(PARAMS['key'])
+    elif PARAMS.has_key('id'):
+        tv2.playVideo(PARAMS['id'])
     else:
-        showOverview()
+        tv2.showOverview()
 
