@@ -148,9 +148,9 @@ if __name__ == '__main__':
 
     tv2 = TV2VideoAddon()
     if PARAMS.has_key('key'):
-        tv2.showCategory(PARAMS['key'])
+        tv2.showCategory(PARAMS['key'][0])
     elif PARAMS.has_key('id'):
-        tv2.playVideo(PARAMS['id'])
+        tv2.playVideo(PARAMS['id'][0])
     else:
         tv2.showOverview()
 
