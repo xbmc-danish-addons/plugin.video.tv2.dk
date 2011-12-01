@@ -2,7 +2,7 @@ import re
 import sys
 import simplejson
 import os
-import cgi as urlparse
+import urlparse
 import urllib2
 from htmlentitydefs import name2codepoint
 
@@ -38,11 +38,10 @@ class TV2VideoAddon(object):
                 item = xbmcgui.ListItem(title, iconImage=ICON, thumbnailImage=ICON)
             else:
                 item = xbmcgui.ListItem(key, iconImage=ICON, thumbnailImage=ICON)
-
+            item.setProperty('Fanart_Image', FANART)
             url = PATH + '?key=' + key
             xbmcplugin.addDirectoryItem(HANDLE, url, item, True)
 
-#        xbmcplugin.setContent(HANDLE, 'tvshows')
         xbmcplugin.addSortMethod(HANDLE, xbmcplugin.SORT_METHOD_LABEL)
         xbmcplugin.endOfDirectory(HANDLE)
 
@@ -61,15 +60,16 @@ class TV2VideoAddon(object):
                 infoLabels['date'] = e['date'].replace('-', '.')
             if e['duration'] is not None:
                 infoLabels['duration'] = e['duration'][1:9]
+            infoLabels['studio'] = ADDON.getAddonInfo('name')
 
             item = xbmcgui.ListItem(infoLabels['title'], iconImage = e['img'], thumbnailImage=e['img'])
             item.setInfo('video', infoLabels)
+            item.setProperty('Fanart_Image', FANART)
             item.setProperty('IsPlayable', 'true')
             url = PATH + '?id=' + str(e['id'])
 
             xbmcplugin.addDirectoryItem(HANDLE, url, item)
 
-#        xbmcplugin.setContent(HANDLE, 'episodes')
         xbmcplugin.addSortMethod(HANDLE, xbmcplugin.SORT_METHOD_DATE)
         xbmcplugin.endOfDirectory(HANDLE)
 
@@ -145,6 +145,7 @@ if __name__ == '__main__':
     PARAMS = urlparse.parse_qs(sys.argv[2][1:])
 
     ICON = os.path.join(ADDON.getAddonInfo('path'), 'icon.png')
+    FANART = os.path.join(ADDON.getAddonInfo('path'), 'fanart.jpg')
 
     tv2 = TV2VideoAddon()
     if PARAMS.has_key('key'):
