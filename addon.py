@@ -46,6 +46,9 @@ def listFeed():
     items = list()
     doc = ET.fromstring(data)
     for rssItem in doc.findall('channel/item'):
+        if not 'video' in rssItem.find('content').get('type'):
+            continue
+
         image = rssItem.findtext('defaultThumbnailUrl')
         if not image:
             image = ICON
@@ -70,6 +73,7 @@ def listFeed():
 
 
 def playVideo(url):
+    print url
     u = urllib2.urlopen(url)
     smil = u.read()
     u.close()
